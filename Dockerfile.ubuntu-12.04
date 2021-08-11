@@ -1,0 +1,163 @@
+# syntax=docker/dockerfile:1
+FROM ubuntu:12.04 AS base
+
+ENV TERM="vt100" DEBIAN_FRONTEND="noninteractive"
+
+RUN sed -ri -e 's/archive.ubuntu.com/old-releases.ubuntu.com/' /etc/apt/sources.list \
+    && apt-get -y update \
+    && apt-get -y install --no-install-recommends \
+    apache2 \
+    bzip2 \
+    ca-certificates \
+    curl \
+    file \
+    giflib-tools \
+    graphicsmagick \
+    graphicsmagick-imagemagick-compat \
+    graphviz \
+    gyp \
+    gzip \
+    jpegoptim \
+    libapache2-mod-php5 \
+    libgd-tools \
+    libjpeg-progs \
+    libid3-tools \
+    libnss3 \
+    libphp-pclzip \
+    libtiff-tools \
+    mcrypt \
+    msmtp-mta \
+    optipng \
+    php-getid3 \
+    php-gettext \
+    php-net-ftp \
+    php-soap \
+    php-xml-parser \
+    php-xml-serializer \
+    php5 \
+    php5-xcache \
+    php5-cli \
+    php5-common \
+    php5-curl \
+    php5-gd \
+    php5-imagick \
+    php5-intl \
+    php5-json \
+    php5-memcached \
+    php5-mysqlnd \
+    php5-pgsql \
+    php5-sqlite \
+    php5-tidy \
+    php5-xsl \
+    pngquant \
+    pngtools \
+    pv \
+    python \
+    sqlite \
+    unzip \
+    xz-utils \
+    zip \
+    \
+    && rm -rf /var/lib/apt/lists/* /tmp/*
+
+# Install 3rd party tools and libraries
+# - composer (v1)
+# - nodejs 8.17.0 from archive
+# - static webp, those in ubuntu repo is too large, over 200mb
+# - static ffmpeg, those in ubuntu repo is too large, over 300mb
+RUN ( \
+    curl -L -o /usr/bin/composer https://getcomposer.org/download/latest-1.x/composer.phar \
+    && chmod +x /usr/bin/composer \
+    ) \
+    && ( \
+    curl -L -o /tmp/nodejs.tgz https://nodejs.org/dist/latest-v8.x/node-v8.17.0-linux-x64.tar.gz \
+    && tar xf /tmp/nodejs.tgz -C /usr --strip-components 1 \
+    && rm -f /usr/CHANGELOG.md /usr/LICENSE /usr/README.md \
+    ) \
+    && ( \
+    curl -L -o /tmp/libwebp.tgz https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.1.0-linux-x86-64.tar.gz \
+    && tar xf /tmp/libwebp.tgz -C /usr --strip-components 1 \
+    && rm -f /usr/README /usr/README.mux \
+    ) \
+    && ( \
+    curl -L -o /tmp/ffmpeg.tar.xz https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz \
+    && tar xf /tmp/ffmpeg.tar.xz -C /usr/local \
+    && ln -s /usr/local/ffmpeg-*/ff* /usr/bin \
+    ) \
+    && rm -rf /tmp/*
+
+RUN --mount=target=/mnt,type=bind,source=./config \
+    \
+    mkdir /var/www/html \
+    && cp /mnt/www/index.php /var/www/html \
+    && cp /mnt/apache2/90-webruntime.conf /etc/apache2/conf.d/zzz-webruntime.conf \
+    && cp /mnt/php/90-webruntime.ini /etc/php5/conf.d/zzz-webruntime.ini \
+    && cp /mnt/docker-entrypoint.sh / \
+    && cp /mnt/install-headless-browsers.sh /usr/local/bin \
+    \
+    && . /etc/apache2/envvars \
+    && a2enmod \
+    alias \
+    autoindex \
+    cache \
+    deflate \
+    dir \
+    expires \
+    filter \
+    headers \
+    rewrite \
+    proxy \
+    proxy_http \
+    proxy_connect \
+    setenvif \
+    && a2dismod -f status \
+    && a2dissite 000-default \
+    && find /etc/apache2 -type f -name '*.conf' -exec sed -ri 's!/var/www/html!\${PROJECT_ROOT}/\${PROJECT_PUBLIC}!g' '{}' + \
+    && find /etc/apache2 -type f -name '*.conf' -exec sed -ri 's!/var/www!\${PROJECT_ROOT}!g' '{}' + \
+    && find /etc/apache2 -type f -name '*.conf' -exec sed -ri 's!\$\{APACHE_LOG_DIR\}/error.log!/dev/stderr!g' '{}' + \
+    && find /etc/apache2 -type f -name '*.conf' -exec sed -ri 's!\$\{APACHE_LOG_DIR\}/access.log!/dev/stdout!g' '{}' + \
+    && find /etc/apache2 -type f -name '*.conf' -exec sed -ri 's!\$\{APACHE_LOG_DIR\}/other_vhosts_access.log!/dev/stdout!g' '{}' + \
+    && sed -ri 's!\$\{APACHE_LOG_DIR\}/other_vhosts_access.log!/dev/stdout!g' /etc/apache2/conf.d/other-vhosts-access-log \
+    && sed -ri 's!NameVirtualHost!#NameVirtualHost!' /etc/apache2/ports.conf \
+    && sed -ri 's!Require all granted!#allow from all!' /etc/apache2/conf.d/*.conf \
+    && rm -f "/var/www/index.html" /etc/apache2/sites-available/*
+
+EXPOSE 80
+
+ENV TZ="UTC" \
+    COMPOSER_HOME=\
+    COMPOSER_ALLOW_SUPERUSER=1 \
+    APACHE_UID=\
+    APACHE_GUID=\
+    SERVER_ADMIN=webmaster@localhost \
+    PROJECT_ROOT=/var/www \
+    PROJECT_PUBLIC=html \
+    NODE_ENV=production
+
+CMD ["bash", "/docker-entrypoint.sh"]
+
+
+# Dev image
+FROM base AS dev
+
+RUN apt-get -y update \
+    && apt-get -y install --no-install-recommends \
+    build-essential \
+    mysql-client \
+    php5-dev \
+    php5-xdebug \
+    php-pear \
+    postgresql-client \
+    && pecl install xhprof-0.9.4 \
+    && rm -rf /var/lib/apt/lists/* /tmp/*
+
+RUN --mount=target=/mnt,type=bind,source=./config \
+    \
+    cp /mnt/www/index-dev.php /var/www/html/index.php \
+    && cp /mnt/apache2/95-xhprof.conf /etc/apache2/conf.d/zzz-xhprof.conf \
+    && cp /mnt/php/95-webruntime-dev.ini /etc/php5/conf.d/zzz-webruntime-dev.ini \
+    && cp /mnt/php/95-xdebug2.ini /etc/php5/apache2/conf.d/zzz-xdebug2.ini \
+    && cp /mnt/php/xhprof-link.php /usr/share/php
+
+ENV SMTPSERVER=mailhog \
+    NODE_ENV=development

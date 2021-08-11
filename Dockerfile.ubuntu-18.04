@@ -1,0 +1,183 @@
+# syntax=docker/dockerfile:1
+FROM ubuntu:18.04 AS base
+
+ENV TERM="vt100" DEBIAN_FRONTEND="noninteractive"
+
+RUN apt-get -y update \
+    && apt-get -y install --no-install-recommends \
+    apache2 \
+    bzip2 \
+    ca-certificates \
+    curl \
+    file \
+    giflib-tools \
+    graphicsmagick \
+    graphicsmagick-imagemagick-compat \
+    graphviz \
+    gzip \
+    jpegoptim \
+    libapache2-mod-php \
+    libgd-tools \
+    libjpeg-progs \
+    libnss3 \
+    libpng-tools \
+    libid3-tools \
+    libtiff-tools \
+    mcrypt \
+    msmtp-mta \
+    optipng \
+    php \
+    php7.2-opcache \
+    php7.2-xml \
+    php7.2-xsl \
+    php-apcu \
+    php-bz2 \
+    php-cli \
+    php-common \
+    php-curl \
+    php-gd \
+    php-getid3 \
+    php-gettext \
+    php-gmagick \
+    php-intl \
+    php-json \
+    php-mbstring \
+    php-memcached \
+    php-mongodb \
+    php-mysql \
+    php-pgsql \
+    php-readline \
+    php-redis \
+    php-soap \
+    php-sqlite3 \
+    php-tidy \
+    php-tokenizer \
+    php-twig \
+    php-uuid \
+    php-xml \
+    php-xsl \
+    php-zip \
+    pngquant \
+    pv \
+    python3 \
+    sqlite \
+    unzip \
+    xz-utils \
+    zip \
+    \
+    && ln -s /usr/bin/python3 /usr/bin/python \
+    && rm -rf /var/lib/apt/lists/* /tmp/*
+
+# Install 3rd party tools and libraries
+# - composer (v1 and v2)
+# - official nodejs from its repo
+# - static webp, those in ubuntu repo is too large, over 200mb
+# - static ffmpeg, those in ubuntu repo is too large, over 300mb
+RUN ( \
+    curl -L -o /usr/bin/composer-v1 https://getcomposer.org/download/latest-1.x/composer.phar \
+    && curl -L -o /usr/bin/composer-v2 https://getcomposer.org/download/latest-2.x/composer.phar \
+    && chmod +x /usr/bin/composer-v1 \
+    && chmod +x /usr/bin/composer-v2 \
+    && ln -s /usr/bin/composer-v1 /usr/bin/composer \
+    ) \
+    && ( \
+    curl -SL https://deb.nodesource.com/setup_12.x | bash - \
+    && apt-get -y install --no-install-recommends nodejs \
+    ) \
+    && ( \
+    curl -L -o /tmp/libwebp.tgz https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.1.0-linux-x86-64.tar.gz \
+    && tar xf /tmp/libwebp.tgz -C /usr --strip-components 1 \
+    && rm -f /usr/README /usr/README.mux \
+    ) \
+    && ( \
+    curl -L -o /tmp/ffmpeg.tar.xz https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz \
+    && tar xf /tmp/ffmpeg.tar.xz -C /usr/local \
+    && ln -s /usr/local/ffmpeg-*/ff* /usr/bin \
+    ) \
+    && rm -rf /tmp/*
+
+RUN --mount=target=/mnt,type=bind,source=./config \
+    \
+    cp /mnt/www/index.php /var/www/html \
+    && cp /mnt/apache2/90-webruntime.conf /etc/apache2/conf-enabled \
+    && cp /mnt/apache2/90-remoteip.conf /etc/apache2/conf-enabled \
+    && cp /mnt/php/90-webruntime.ini /etc/php/7.2/apache2/conf.d \
+    && ln -s /etc/php/7.2/apache2/conf.d/90-webruntime.ini /etc/php/7.2/cli/conf.d \
+    && cp /mnt/docker-entrypoint.sh / \
+    && cp /mnt/install-headless-browsers.sh /usr/local/bin \
+    \
+    &&. /etc/apache2/envvars \
+    && a2enmod \
+    alias \
+    autoindex \
+    cache \
+    deflate \
+    dir \
+    expires \
+    filter \
+    headers \
+    remoteip \
+    rewrite \
+    proxy \
+    proxy_http \
+    proxy_connect \
+    setenvif \
+    && a2dismod -f status \
+    && a2dissite 000-default \
+    && find /etc/apache2 -type f -name '*.conf' -exec sed -ri 's/([[:space:]]*LogFormat[[:space:]]+"[^"]*)%h([^"]*")/\1%a\2/g' '{}' + \
+    && find /etc/apache2 -type f -name '*.conf' -exec sed -ri 's!/var/www/html!\${PROJECT_ROOT}/\${PROJECT_PUBLIC}!g' '{}' + \
+    && find /etc/apache2 -type f -name '*.conf' -exec sed -ri 's!/var/www!\${PROJECT_ROOT}!g' '{}' + \
+    && find /etc/apache2 -type f -name '*.conf' -exec sed -ri 's!\$\{APACHE_LOG_DIR\}/error.log!/dev/stderr!g' '{}' + \
+    && find /etc/apache2 -type f -name '*.conf' -exec sed -ri 's!\$\{APACHE_LOG_DIR\}/access.log!/dev/stdout!g' '{}' + \
+    && find /etc/apache2 -type f -name '*.conf' -exec sed -ri 's!\$\{APACHE_LOG_DIR\}/other_vhosts_access.log!/dev/stdout!g' '{}' + \
+    && rm -f "/var/www/html/index.html" "/var/www/html/.htaccess" /etc/apache2/sites-available/*
+
+EXPOSE 80
+
+ENV TZ="UTC" \
+    COMPOSER_HOME=\
+    COMPOSER_ALLOW_SUPERUSER=1 \
+    APACHE_UID=\
+    APACHE_GUID=\
+    SERVER_ADMIN=webmaster@localhost \
+    PROJECT_ROOT=/var/www \
+    PROJECT_PUBLIC=html \
+    NODE_ENV=production \
+    REMOTE_IP_TRUSTED_PROXY="10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 169.254.0.0/16 127.0.0.0/8"
+
+CMD ["bash", "/docker-entrypoint.sh"]
+
+
+# Dev image
+FROM base AS dev
+
+RUN apt-get -y update \
+    && apt-get -y install --no-install-recommends \
+    mysql-client \
+    php-dev \
+    php-pear \
+    php-tideways \
+    php-xdebug \
+    postgresql-client \
+    \
+    && (\
+    curl -L -o /tmp/xhprof.tar.gz http://pecl.php.net/get/xhprof \
+    && tar xf /tmp/xhprof.tar.gz -C /tmp \
+    && cp -rf /tmp/xhprof-*/xhprof_* /usr/local/share \
+    ) \
+    && rm -rf /var/lib/apt/lists/* /tmp/*
+
+RUN --mount=target=/mnt,type=bind,source=./config \
+    \
+    phpenmod xdebug tideways \
+    \
+    && cp /mnt/www/index-dev.php /var/www/html/index.php \
+    && cp /mnt/apache2/95-xhprof.conf /etc/apache2/conf-enabled \
+    && cp /mnt/php/95-webruntime-dev.ini /etc/php/7.2/apache2/conf.d \
+    && cp /mnt/php/95-webruntime-dev.ini /etc/php/7.2/cli/conf.d \
+    && cp /mnt/php/95-xdebug2.ini /etc/php/7.2/apache2/conf.d \
+    && cp /mnt/php/95-xdebug2.ini /etc/php/7.2/cli/conf.d \
+    && cp /mnt/php/xhprof-link.php /usr/share/php
+
+ENV SMTPSERVER=mailhog \
+    NODE_ENV=development
