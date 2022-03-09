@@ -12,15 +12,12 @@
 | `ubuntu-14.04-dev`         |                                                                |
 | `ubuntu-12.04`             | apache: 2.2; php: 5.3; composer: 1; node: 8.x; python: 2.7     |
 | `ubuntu-12.04-dev`         |                                                                |
-| `alpine-php8`              | apache: 2.4; php: 8.0; composer: 2; node: 14.x; python: 3.9    |
-| `alpine-php8-dev`          |                                                                |
-| `alpine`                   | apache: 2.4; php: 7.4; composer: 2; node: 14.x; python: 3.9    |
-| `alpine-dev`               |                                                                |
 
 ## Whats inside?
 
--   Apache
 -   PHP (with composer-1 and composer-2)
+-   Apache
+    -   maxminddb
 -   Python
 -   NodeJS (node and npm)
 -   Graphics tools:
@@ -76,7 +73,7 @@ echo "Hello"
 `SERVER_ADMIN` - Set apache's server admin info (defaults to `webmaster@localhost`)
 
 `REMOTE_IP_TRUSTED_PROXY` - Sets apache remote IP trusted list
-(defaults to `10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 169.254.0.0/16 127.0.0.0/8`)
+(defaults to `10.0.0.0/8 172.16.0.0/8 192.168.0.0/16 169.254.0.0/16 127.0.0.0/8`)
 
 (dev) `SMTPSERVER` - Set hostname of smtp server (defaults to `mailhog`)
 
