@@ -6,19 +6,7 @@ if [ "$(id -u)" != "0" ]; then
     exit 1
 fi
 
-if [ -f "/etc/apache2/envvars" ]; then
-    . /etc/apache2/envvars
-elif [ -f "/etc/conf.d/apache2" ]; then
-    . /etc/conf.d/apache2
-fi
-
-if [ -z "$HTTPD" ]; then
-    if [ -n "$(command -v httpd)" ]; then
-        export HTTPD="httpd"
-    else
-        export HTTPD="apache2"
-    fi
-fi
+. /etc/apache2/envvars
 
 if [ -z "$APACHE_RUN_USER" ]; then
     export APACHE_RUN_USER="apache"
@@ -91,5 +79,5 @@ if [ ! -d "$PROJECT_ROOT/$PROJECT_PUBLIC" ]; then
     exit 1
 fi
 
-echo "Starting $HTTPD with DocumentRoot: $PROJECT_ROOT/$PROJECT_PUBLIC"
-exec "$HTTPD" -DFOREGROUND
+echo "Starting apache2 with DocumentRoot: $PROJECT_ROOT/$PROJECT_PUBLIC"
+exec apache2 -DFOREGROUND
