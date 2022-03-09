@@ -5,6 +5,7 @@ CONTAINER_IMAGE_NAME="webruntime"
 # LATEST=
 # NODEV=
 # PULL_BASE=
+# PUBLISH=
 
 if [ -f ".env" ]; then
     source .env

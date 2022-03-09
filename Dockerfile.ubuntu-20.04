@@ -11,6 +11,7 @@ RUN apt-get -y update \
     curl \
     file \
     giflib-tools \
+    gnupg2 \
     graphicsmagick \
     graphicsmagick-imagemagick-compat \
     graphviz \
@@ -134,7 +135,6 @@ RUN --mount=target=/mnt,type=bind,source=./config \
     && find /etc/apache2 -type f -name '*.conf' -exec sed -ri 's!/var/www!\${PROJECT_ROOT}!g' '{}' + \
     && find /etc/apache2 -type f -name '*.conf' -exec sed -ri 's!\$\{APACHE_LOG_DIR\}/error.log!/dev/stderr!g' '{}' + \
     && find /etc/apache2 -type f -name '*.conf' -exec sed -ri 's!\$\{APACHE_LOG_DIR\}/access.log!/dev/stdout!g' '{}' + \
-    && find /etc/apache2 -type f -name '*.conf' -exec sed -ri 's!\$\{APACHE_LOG_DIR\}/other_vhosts_access.log!/dev/stdout!g' '{}' + \
     && rm -f "/var/www/html/index.html" "/var/www/html/.htaccess" /etc/apache2/sites-available/*
 
 EXPOSE 80
@@ -148,7 +148,7 @@ ENV TZ="UTC" \
     PROJECT_ROOT=/var/www \
     PROJECT_PUBLIC=html \
     NODE_ENV=production \
-    REMOTE_IP_TRUSTED_PROXY="10.0.0.0/8 172.16.0.0/8 192.168.0.0/16 169.254.0.0/16 127.0.0.0/8"
+    REMOTE_IP_TRUSTED_PROXY="10.0.0.0/8 100.64.0.0/10 172.16.0.0/12 192.168.0.0/16 169.254.0.0/16 127.0.0.0/8"
 
 CMD ["bash", "/docker-entrypoint.sh"]
 

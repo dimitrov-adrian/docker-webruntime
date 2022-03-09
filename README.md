@@ -73,7 +73,7 @@ echo "Hello"
 `SERVER_ADMIN` - Set apache's server admin info (defaults to `webmaster@localhost`)
 
 `REMOTE_IP_TRUSTED_PROXY` - Sets apache remote IP trusted list
-(defaults to `10.0.0.0/8 172.16.0.0/8 192.168.0.0/16 169.254.0.0/16 127.0.0.0/8`)
+(defaults to `10.0.0.0/8 100.64.0.0/10 172.16.0.0/12 192.168.0.0/16 169.254.0.0/16 127.0.0.0/8`)
 
 (dev) `SMTPSERVER` - Set hostname of smtp server (defaults to `mailhog`)
 
