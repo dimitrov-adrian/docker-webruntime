@@ -4,6 +4,8 @@
 
 | Flavour                    | Toolchain                                                      |
 | -------------------------- | -------------------------------------------------------------- |
+| `ubuntu-22.04`             | apache: 2.4; php: 8.1; composer: 2; node: 18.x; python: 3.10   |
+| `ubuntu-22.04-dev`         |                                                                |
 | `ubuntu-20.04`, _`latest`_ | apache: 2.4; php: 7.4; composer: 1, 2; node: 14.x; python: 3.8 |
 | `ubuntu-20.04-dev`         |                                                                |
 | `ubuntu-18.04`             | apache: 2.4; php: 7.2; composer: 1, 2; node: 12.x; python: 3.6 |
@@ -15,7 +17,8 @@
 
 ## Whats inside?
 
--   PHP (with composer-1 and composer-2)
+-   PHP
+    -   composer
 -   Apache
     -   maxminddb
 -   Python
@@ -33,7 +36,7 @@
     -   id3
 -   SQLite
 
-**Dev containers extends with:**
+**Dev containers extends with: `-dev`**
 
 -   xhprof (with tideways module on /.xdebug)
 -   xdebug
